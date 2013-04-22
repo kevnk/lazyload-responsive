@@ -42,7 +42,7 @@ It would be nice to create a library-agnostic/raw javascript/standalone version 
 	data-lzld-widthfactor [optional; default: 200] - looks for images with the following naming convention [real-image-src]_[factor of widthfactor].[file-extenstion]
 	data-lzld-smaller [optional; default: false] - forces script to look for and load smaller images as viewport is resized to a smaller size
 	data-lzld-lowres [optional; default: false] - forces script to **not** look for high-res images
-	data-lzld-longfallback [optional; default: false] - will look for all smaller images
+	data-lzld-longfallback [optional; default: false] - will look for all smaller images before loading the original (and largest image)
 
 	// Default options
 	var lzldWidthfactor = 200, // see data-lzld-widthfactor
