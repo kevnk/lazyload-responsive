@@ -51,13 +51,3 @@ It would be nice to create a library-agnostic/raw javascript/standalone version 
 		lzldLowres = false, // see data-lzld-lowres above
 		lzldLongfallback = false; // see data-lzld-longfallback above
 		lzldLoadevent = ['scroll','resize'] // see data-lzld-loadevent above
-
-	// @see: http://stackoverflow.com/questions/3646914/how-do-i-check-if-file-exists-in-jquery-or-javascript
-	// Check if image exists
-	function UrlExists(url)
-	{
-	    var http = new XMLHttpRequest();
-	    http.open('HEAD', url, false);
-	    http.send();
-	    return http.status!=404;
-	}
