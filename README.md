@@ -33,21 +33,3 @@ I will pull some ideas from [https://github.com/fasterize/lazyload](https://gith
 ## Roadmap
 
 It would be nice to create a library-agnostic/raw javascript/standalone version and a jquery plugin version.
-
-
-## Snippet Holding Tank
-
-	// Available data-attributes
-	data-lzld-src [required] - the real (original/largest) image src
-	data-lzld-widthfactor [optional; default: 200] - looks for images with the following naming convention [real-image-src]_[factor of widthfactor].[file-extenstion]
-	data-lzld-smaller [optional; default: false] - forces script to look for and load smaller images as viewport is resized to a smaller size
-	data-lzld-lowres [optional; default: false] - forces script to **not** look for high-res images
-	data-lzld-longfallback [optional; default: false] - will look for all smaller images before loading the original (and largest image)
-	data-lzld-loadevent [optional; default: ['scroll','resize'] ] - you may want to load the images on a custom event; this is where you do that
-
-	// Default options
-	var lzldWidthfactor = 200, // see data-lzld-widthfactor
-		lzldSmaller = false, // see data-lzld-smaller above
-		lzldLowres = false, // see data-lzld-lowres above
-		lzldLongfallback = false; // see data-lzld-longfallback above
-		lzldLoadevent = ['scroll','resize'] // see data-lzld-loadevent above
