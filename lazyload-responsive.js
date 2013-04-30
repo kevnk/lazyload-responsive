@@ -1,10 +1,3 @@
-// loadImage method
-// resizeImage method
-    // getImageSrc method
-    // parseImageFilename method and store on the object
-// object of images to load
-// object of images to resize
-
 (function(window, document){
     
     window.LazyloadResponsive = {
@@ -16,12 +9,14 @@
             lowres: false, // forces script to **not** look for high-res images
             longfallback: false, // will look for all smaller images before loading the original (and largest image)
             loadevent: ['scroll','resize'] // you may want to load the images on a custom event; this is where you do that
+            offset: 200
         },
         // Flags
         _f: {},
         lzldImages: [],
-        imagesToLoad: [],
         imagesToResize: [],
+        imagesLoaded: [],
+        imagesToLoad: [],
         initialize: function() {
             var that = this;
             
@@ -33,13 +28,10 @@
             for( var i = 0, il = imgs.length; i < il; i++ ){
                 if( imgs[ i ].getAttribute( that._o.srcAttr ) !== null ){
                     that.lzldImages.push( imgs[ i ] );
-                    that._u.contentLoaded(window, function(e){
-                        // Go ahead and load the images above the fold
-                        // Check before each image if it's below the fold
-                        
-                    });
                 }
             }
+            // dom ready, resize, and scroll events
+            that.attachEvents();
             
             return that;
         },
@@ -48,23 +40,47 @@
             that._f.isHighRes = that._u.getPixelRatio() > 1;
         },
         attachEvents: function() {
-            // when to loadImage
-            // when to resizeImage
-            // when to manageImages
+            var that = this;
+            that.domReady();
+            // TODO - when to call showImages
+            // TODO - when to call resizeImages
         },
-        // @var img - dom element to manage
-        // @var imageArray Array - array to manage
-        // @var adding bool - `true` to add to imageArray; `false` to remove from imageArray
-        manageImage: function(img, imageArray, adding) {
-            
+        domReady: function() {
+            var that = this;
+            that._u.contentLoaded(window, function(e){
+                that.showImages();
+            });
         },
-        loadImage: function() {
-            // loop through imagesToLoad
-            // getImageSrc
+        showImages: function() {
+            var that = this;
+            for (var i = that.lzldImages.length - 1; i >= 0; i--){
+                var img = that.lzldImages[i];
+                // TODO optimize: put faster one first
+                if (img.getAttribute('data-lzld-done') === null && that._u.isVisible(img)) {
+                    that.imagesToLoad.push(img);
+                };
+            };
+            that.loadImages();
         },
-        resizeImage: function() {
-            // loop through imagesToResize
-            // getImageSrc
+        loadImages: function() {
+            var that = this;
+            for (var i = that.imagesToLoad.length - 1; i >= 0; i--){
+                var img = that.imagesToLoad[i];
+
+                // TODO: get and set image src
+
+                // mark as done
+                that._u.writeAttribute(img, 'data-lzld-done', 'done');
+                that.imagesLoaded.push(img);
+            };
+        },
+        resizeImages: function() {
+            var that = this;
+            for (var i = that.imagesLoaded.length - 1; i >= 0; i--){
+                var img = that.imagesLoaded[i];
+
+                // TODO: get and set image src
+            };
         },
         // @var img - dom element
         getImageSrc: function(img) {
@@ -73,9 +89,7 @@
             // getCurrentFactoredWidth
         },
         getCurrentFactoredWidth: function() {
-            var that = this;
-            // that._u.getViewportWidth();
-            // 
+            
         },
         // should only be done once and stored on the img
         parseImageFilename: function() {
@@ -90,7 +104,65 @@
             var that = this;
             return img.getAttribute("data-lzld-"+attr) || that.lzld._o[attr];
         },
-    	// @see: http://stackoverflowindow.com/questions/3646914/how-do-i-check-if-file-exists-in-jquery-or-javascript
+        writeAttribute: function(elem, attr, value) {
+            var a = document.createAttribute(attr);
+            attr.value = value;
+            elem.setAttributeNode(attr);
+        },
+        addEvent: function(el, type, fn) {
+          if (el.attachEvent) {
+            el.attachEvent && el.attachEvent( 'on' + type, fn );
+          } else {
+            el.addEventListener( type, fn, false );
+          }
+        },
+        removeEvent: function(el, type, fn) {
+          if (el.detachEvent) {
+            el.detachEvent && el.detachEvent( 'on' + type, fn );
+          } else {
+            el.removeEventListener( type, fn, false );
+          }
+        },
+        isVisible: function(img) {
+            var that = this;
+            return (that.contains(document.documentElement, img) && img.getBoundingClientRect().top < winH + offset);
+        },
+        // https://github.com/jquery/sizzle/blob/3136f48b90e3edc84cbaaa6f6f7734ef03775a07/sizzle.js#L708
+        contains: function(a,b) {
+            if (document.documentElement.compareDocumentPosition) {
+                return !!(a.compareDocumentPosition( b ) & 16);
+            };
+            if (document.documentElement.contains) {
+                return a !== b && ( a.contains ? a.contains( b ) : false );
+            };
+            while ( (b = b.parentNode) ) {
+              if ( b === a ) {
+                return true;
+              }
+            }
+            return false;
+        },
+        // https://github.com/jquery/jquery/blob/f3515b735e4ee00bb686922b2e1565934da845f8/src/core.js#L610
+        // We cannot use Array.prototype.indexOf because it's not always available
+        inArray: function(elem, array, i) {
+            var len;
+            if ( array ) {
+                if ( Array.prototype.indexOf ) {
+                    return Array.prototype.indexOf.call( array, elem, i );
+                }
+                len = array.length;
+                i = i ? i < 0 ? Math.max( 0, len + i ) : i : 0;
+                for ( ; i < len; i++ ) {
+                    // Skip accessing in sparse arrays
+                    if ( i in array && array[ i ] === elem ) {
+                        return i;
+                    }
+                }
+            }
+            return -1;
+        },
+        
+        // http://stackoverflowindow.com/questions/3646914/how-do-i-check-if-file-exists-in-jquery-or-javascript
         urlExists: function(url) {
             var http = new XMLHttpRequest();
             http.open('HEAD', url, false);
