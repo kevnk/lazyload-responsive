@@ -29,7 +29,18 @@ If you're lazyloading images, you might as well add features to load responsive 
 
 I will pull some ideas from [https://github.com/fasterize/lazyload](https://github.com/fasterize/lazyload) for a library-agnostic/raw javascript/standalone lazyloading experience. 
 
+## TODO
+
+- do something about images being requested while other images are loading
+	- perhaps use some sort of promise-type OnReadyStateChange with the urlExists method so images aren't being requested while others are being loaded
+- Optimize when everything gets initilized and isolate the things that need dom loaded
+- Do Roadmap
 
 ## Roadmap
 
-It would be nice to create a library-agnostic/raw javascript/standalone version and a jquery plugin version.
+- Rewrite this with coffeescript to prepare for plugins
+- Create a jquery plugin version
+
+## How to Contribute
+
+Just send me a pull request. Thanks!
