@@ -106,29 +106,30 @@ function contentLoaded(win, fn) {
                 })
             };
             var winW = that._u.getViewportWidth();
-            // TODO: throttle these
-            // FIXME
-/*
-            window.onresize = function() {
+            // onresize
+            that._u.addEvent(window,"resize",function(){
                 var newWinW = that._u.getViewportWidth();
                 if (that._o.smaller || newWinW > winW) {
-                    that.resizeImages();
+                    that._u.throttle( function(){
+                        that.resizeImages();
+                    }, 20 );
                 };
                 if (newWinW > winW) {
-                    that.showImages();
+                    that._u.throttle( function(){
+                        that.showImages();
+                    }, 20 );
                 };
                 winW = newWinW;
-            };
-*/
-            // TODO: throttle these
-            // FIXME
-/*
-            window.onscroll = function() {
-                that.showImages();
-            }
-*/
+            });
+            // onscroll
+            that._u.addEvent(window,"scroll",function(){
+                that._u.throttle( function(){
+                    that.showImages();
+                }, 20 );
+            });
         },
         showImages: function() {
+            console.log('show');
             var that = this;
             for (var i = that.lzldImages.length - 1; i >= 0; i--){
                 var img = that.lzldImages[i];
@@ -140,6 +141,7 @@ function contentLoaded(win, fn) {
             that.loadImages();
         },
         loadImages: function() {
+            console.log('load');
             var that = this;
             for (var i = that.imagesToLoad.length - 1; i >= 0; i--){
                 var img = that.imagesToLoad[i],
@@ -154,6 +156,7 @@ function contentLoaded(win, fn) {
             };
         },
         resizeImages: function() {
+            console.log('resize');
             var that = this;
             for (var i = that.imagesLoaded.length - 1; i >= 0; i--){
                 var img = that.imagesLoaded[i],
@@ -243,6 +246,19 @@ function contentLoaded(win, fn) {
         getLzldAttr: function(img, attr) {
             var that = this;
             return img.getAttribute("data-lzld-"+attr) || that.lzld._o[attr];
+        },
+        throttle: function(fn, minDelay) {
+            var lastCall = 0;
+            return (function() {
+                var now = +new Date();
+                if (now - lastCall < minDelay) {
+                    return;
+                }
+                lastCall = now;
+                // we do not return anything as
+                // https://github.com/documentcloud/underscore/issues/387
+                fn.apply(this, arguments);
+            })()
         },
         addEvent: function(el, type, fn) {
           if (el.attachEvent) {
