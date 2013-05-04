@@ -56,7 +56,7 @@ function contentLoaded(win, fn) {
 *
 * Author: Kevin Kirchner (kirchner.kevin at gmail.com)
 * Summary: cross-browser lazy and responsive image loader
-* Version: 0.2.1
+* Version: 0.2
 *
 * URL:
 * https://github.com/kevinkirchner/lazyload-responsive
@@ -65,7 +65,6 @@ function contentLoaded(win, fn) {
 
 // TODO:
 // use some sort of promise-type OnReadyStateChange with the urlExists method so images aren't being requested while others are being loaded
-    // have baseSrc saved in a queue while image is loading
 // Optimize when everything gets initilized and isolate the things that need dom loaded
 
 (function(window, document){
@@ -94,14 +93,187 @@ function contentLoaded(win, fn) {
         _f: {},
         // Init variables
         imgs: [],
-        loadImgsQ: [], // All images start here
-        loadedImgs: [], // All loaded (and correctly sized) images end here; Also doubles as the array of images that need to be checked when browser is resized
-        requestingBaseImgs: [], // Store base file name (e.g. 'path/to/image.jpg') of image srcs currently being requested to prevent multiple requests for different sizes of the same image
-        requestImgsQ: [], // Full src queue of different sizes of an image currently being requested in case it 404s
-        availableImgs: [], // Store all successful requests to reuse when needed
-        unavailableImgs: [], // Store all unsuccessful requests to prevent an unnecessary 404 request
-        initilize: function() {
+        imgsToLoad: [],
+        imgsToResize: [],
+        imgsComplete: [],
+        availableSrcs: [],
+        unavailableSrcs: [],
+        requestedSrcs: [],
+        // Initialize
+        initialize: function() {
+            var that = this;
+            that._f.isHighRes = that._u.getPixelRatio() >= 2;
+            // Collect images
+            that.collectImgs();
+            // Load first batch of images
+            that.loadImgs();
+            // Attach Events
+            that.attachEvents();
+        },
+        // This can be run after adding new images to the page to make them lazyload-responsive
+        collectImgs: function() {
+            var that = this;
+            var allImgs = document.getElementsByTagName( "img" );
+            for ( var i = 0, il = allImgs.length; i < il; i++ ){
+                if ( allImgs[i].getAttribute( that._o.srcAttr ) !== null ) {
+                    var img = allImgs[i];
+                    if (that._u.inArray(img, that.imgs) === -1) {
+                        that.imgs.push( img );
+                    };
+                    if (!img.getAttribute('data-lzld-complete') && that._u.isVisible(img)) {
+                        that.imgsToLoad.push( img )
+                    };
+                }
+            }
+        },
+        loadImgs: function() {
+            var that = this;
+            for (var i = that.imgsToLoad.length - 1; i >= 0; i--){
+                var img = that.imgsToLoad[i],
+                    imgSrc = that.getImgSrc(img)
+                    
+                if (imgSrc) {
+                    img.src = imgSrc;
+                    // mark as done
+                    img.setAttribute('data-lzld-complete', 'true');
+                    that.imgsComplete.push(img);
+                    that.imgsToLoad.splice(i,1)
+                };
+            };
+        },
+        resizeImgs: function() {
+            var that = this;
+            for (var i = that.imgsComplete.length - 1; i >= 0; i--){
+                var img = that.imgsComplete[i],
+                    imgSrc = that.getImgSrc(img)
+                    
+                if (imgSrc) {
+                    img.src = imgSrc;
+                };
+            };
+        },
+        attachEvents: function() {
+            var that = this;
+            var winW = that._u.getViewport("Width");
+            var throttleLoad = that._u.throttle( function(){
+                that.collectImgs();
+                that.loadImgs();
+            }, 20);
+            var throttleResize = that._u.throttle( function(){
+                that.resizeImgs();
+            }, 20);
+
+            // onresize
+            that._u.addEvent(window,"resize",function(){
+                var newWinW = that._u.getViewport("Width");
+                if (that._o.smaller || newWinW > winW) {
+                    throttleResize();
+                };
+                if (newWinW > winW) {
+                    throttleLoad();
+                };
+                winW = newWinW;
+            });
+            // onscroll
+            that._u.addEvent(window,"scroll",function(){
+                (that._u.throttle( function(){
+                    that.collectImgs();
+                    that.loadImgs();
+                }, 20))();
+            });
+        },
+        getImgSrc: function(img) {
+            var that = this,
+                imgSrc,
+                isParsed = img.getAttribute('data-lzld-isparsed') || that.parseImageSrc( img ),
+                filePath = img.getAttribute('data-lzld-filepath'),
+                fileName = img.getAttribute('data-lzld-filename'),
+                fileExt = img.getAttribute('data-lzld-fileext'),
+                longfallback = img.getAttribute('data-lzld-longfallback') || that._o.longfallback,
+                sizedown = img.getAttribute('data-lzld-sizedown') || that._o.sizedown,
+                widthfactor = img.getAttribute('data-lzld-widthfactor') || that._o.widthfactor
+                lowres = img.getAttribute('data-lzld-lowres') || that._o.lowres,
+                highressuffix = img.getAttribute('data-lzld-highressuffix') || that._o.highressuffix,
+                useHighRes = that._f.isHighRes && !lowres,
+                viewportW = that._u.getViewport('Width'),
+                imgSearch = [],
+                widthfactorFactor = Math.floor(viewportW / widthfactor),
+                firstWidth = !sizedown ? widthfactorFactor * widthfactor : (widthfactorFactor+1) * widthfactor
+            // figure out the image src(s) names and put in array
+            imgSearch.push( '_'+firstWidth );
+            // if longfallback then add to imgSearch
+            if (longfallback) {
+                for (var i = widthfactorFactor-1; i >= 0; i--){
+                    var w = !sizedown ? i * widthfactor : (i+1) * widthfactor
+                    imgSearch.push( '_'+w );
+                };
+            };
+            // look for the smallest image
+            imgSearch.push( '_small' );
+            // final fallback to the original image
+            imgSearch.push( '' );
+
+            // loop through imgSearch and check for files
+            for (var i=0,il=imgSearch.length; i < il; i++) {
+                // TODO: store the paths that do exist and use them instead
+                var widthPart = imgSearch[i];
+                // High-res
+                if (useHighRes) {
+                    imgSrc = filePath + fileName + widthPart + highressuffix + fileExt;
+                    if (that.checkSrc(imgSrc)) {
+                        return imgSrc;
+                    }
+                };
+                // Low-res
+                imgSrc = filePath + fileName + widthPart + fileExt;
+                if (that.checkSrc(imgSrc)) {
+                    return imgSrc;
+                }
+            };
+            return false;
+        },
+        // Check and store image sources
+        checkSrc: function(imgSrc) {
+            var that = this;
+            if (that._u.inArray(imgSrc, that.availableSrcs) !== -1) {
+                return true;
+            };
+            if (that._u.inArray(imgSrc, that.unavailableSrcs) === -1) {
+                if (that._u.inArray(imgSrc, that.requestedSrcs) === -1 && that.urlExists(imgSrc)) {
+                    that.availableSrcs.push( imgSrc );
+                    return true;
+                } else {
+                    that.unavailableSrcs.push( imgSrc );
+                };
+            };
+            return false;
+        },
+        // should only be done once and stored on the img
+        parseImageSrc: function(img) {
+            // check image parsed
+            var that = this,
+                imgSrc = img.getAttribute( that._o.srcAttr ),
+                lastSlash = imgSrc.lastIndexOf('/')+1,
+                filePath = imgSrc.substring(0,lastSlash),
+                file = imgSrc.substring(lastSlash),
+                lastPeriod = file.lastIndexOf('.'),
+                fileName = file.substring(0,lastPeriod),
+                fileExt = file.substring(lastPeriod);
             
+            img.setAttribute('data-lzld-filepath',filePath);
+            img.setAttribute('data-lzld-filename',fileName);
+            img.setAttribute('data-lzld-fileext',fileExt);
+            img.setAttribute('data-lzld-isparsed','true');
+            return true;
+        },
+        // http://stackoverflow.com/questions/3646914/how-do-i-check-if-file-exists-in-jquery-or-javascript
+        urlExists: function(url) {
+            var that = this;
+            that.requestedSrcs.push(url);
+            var req = new XMLHttpRequest();
+            req.open('GET', url, false);
+            req.send();
+            return req.status==200;
         }
     }
     
@@ -121,12 +293,6 @@ function contentLoaded(win, fn) {
                 // https://github.com/documentcloud/underscore/issues/387
                 fn.apply(this, arguments);
             };
-        },
-        urlExists: function(url) {
-            var req = new XMLHttpRequest();
-            req.open('GET', url, false);
-            req.send();
-            return req.status==200;
         },
         addEvent: function(el, type, fn) {
           if (el.attachEvent) {
