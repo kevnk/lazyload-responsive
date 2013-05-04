@@ -73,15 +73,19 @@ function contentLoaded(win, fn) {
     // Set default configuration
     var config = {
         srcAttr: 'data-lzld-src',
-        highressuffix: '@2x', // e.g. imagename@2x.jpg or imagename_400@2x.jpg would be the high-res images
-        widthfactor: 200, // looks for images with the following naming convention [real-image-src]_[factor of widthfactor].[file-extenstion]
-        smaller: false, // forces script to look for and load smaller images as viewport is resized to a smaller size
-        lowres: false, // forces script to **not** look for high-res images
-        longfallback: true, // will look for all smaller images before loading the original (and largest image)
-        loadevent: ['scroll','resize'], // you may want to load the images on a custom event; this is where you do that
-        sizedown: false, // by default images are sized up; this option forces it to get an image larger than the viewport and shrink it; NOTE: setting to `true` will load larger images and increase pageload
         offset: 200, // distance (px) below the fold where images will be loaded
-        throttleInterval: 20 // throttled interval for scroll and resize events
+        highResThreshold: 1.5, // any pixel ratio >= this number will be flagged as high-res
+        throttleInterval: 20, // throttled interval for scroll and resize events
+        useGlobalImgConfig: false, // if `false`, the script will look for the following imgConfig on each lzld img (e.g. img.getAttribute('data-lzld-highressuffix') || imgConfig.highressuffix - which takes the script longer to process); setting to `true` is the fastest option
+        imgConfig: {
+            highressuffix: '@2x', // e.g. imagename@2x.jpg or imagename_400@2x.jpg would be the high-res images
+            loadevent: ['scroll','resize'], // you may want to load the images on a custom event; this is where you do that
+            longfallback: true, // will look for all smaller images before loading the original (and largest image)
+            lowres: false, // forces script to **not** look for high-res images
+            sizedown: false, // by default images are sized up; this option forces it to get an image larger than the viewport and shrink it; NOTE: setting to `true` will load larger images and increase pageload
+            smaller: false, // forces script to look for and load smaller images as viewport is resized to a smaller size
+            widthfactor: 200 // looks for images with the following naming convention [real-image-src]_[factor of widthfactor].[file-extenstion]
+        }
     };
     
     var domReady = false;
@@ -96,16 +100,159 @@ function contentLoaded(win, fn) {
         imgs: [],
         loadImgsQ: [], // All images start here
         loadedImgs: [], // All loaded (and correctly sized) images end here; Also doubles as the array of images that need to be checked when browser is resized
-        requestingBaseImgs: [], // Store base file name (e.g. 'path/to/image.jpg') of image srcs currently being requested to prevent multiple requests for different sizes of the same image
+        requestingBaseImgSrc: [], // Store base file name (e.g. 'path/to/image.jpg') of image srcs currently being requested to prevent multiple requests for different sizes of the same image
         requestImgsQ: [], // Full src queue of different sizes of an image currently being requested in case it 404s
-        availableImgs: [], // Store all successful requests to reuse when needed
-        unavailableImgs: [], // Store all unsuccessful requests to prevent an unnecessary 404 request
+        availableImgSrc: [], // Store all successful requests to reuse when needed
+        unavailableImgSrc: [], // Store all unsuccessful requests to prevent an unnecessary 404 request
         initilize: function() {
+            var that = this;
+            // Set high-res flag
+            that._f.isHighRes = that._u.getPixelRatio() >= that._o.highResThreshold;
+            // Collect images
+            that.collectImgs();
+            // Load first batch of images
+            that.loadImgs();
+            // Attach Events
+            that.attachEvents();
+        },
+        // This can be run after adding new images to the page to make them lazyload-responsive
+        collectImgs: function() {
+            var that = this;
+            var allImgs = document.getElementsByTagName( "img" );
+            for ( var i = 0, il = allImgs.length; i < il; i++ ){
+                if ( allImgs[i].getAttribute( that._o.srcAttr ) !== null ) {
+                    var img = allImgs[i];
+                    if (that._u.inArray(img, that.imgs) === -1) {
+                        that.imgs.push( img );
+                    };
+                    if (!img.getAttribute('data-lzld-complete') && that._u.isVisible(img)) {
+                        that.loadImgsQ.push( img )
+                    };
+                }
+            }
+        },
+        loadImgs: function() {
+            // start with loadImgsQ
+            var that = this;
+            for (var i = that.loadImgsQ.length - 1; i >= 0; i--) {
+                var img = that.loadImgsQ[i];
+                var imgData = that.getImgData(img);
+                // begin the request(s)
+                that.requestImg(imgData);
+                // remove from loadImgsQ
+                that.loadImgsQ.splice(i,1);
+            }
+        },
+        // Should only be run once per image, otherwise it needs to be stored. imgData.aliasArray is the only one that should need to change
+        getImgData: function(img) {
+            var that = this;
+            var imgConfig = that.getImgConfig(img);
+            var parseImgSrc = img.getAttribute('data-lzld-isparsed') ? that.getStoredParsedImgSrc(img) : that.getParsedImgSrc(img);
+            var aliasArray = that.getAliasArray(img, imgConfig);
+            var imgData = {
+                // store the element
+                _e: { img: img },
+                // image config options
+                _o: imgConfig,
+                // get parsed img src
+                _p: parseImgSrc,
+                // calculate array of names to try with the current browser width and image options taken into account
+                aliasArray: aliasArray
+            };
+            return imgData;
+        },
+        getImgConfig: function(img) {
+            var that = this;
+            if (that._o.useGlobalImgConfig) return that._o.imgConfig;
+            // else look for options stored on the <img>
+            return {
+                highressuffix:  img.getAttribute('data-lzld-highressuffix') || that._o.imgConfig.highressuffix,
+                loadevent:      img.getAttribute('data-lzld-loadevent') || that._o.imgConfig.loadevent,
+                longfallback:   img.getAttribute('data-lzld-longfallback') || that._o.imgConfig.longfallback,
+                lowres:         img.getAttribute('data-lzld-lowres') || that._o.imgConfig.lowres,
+                sizedown:       img.getAttribute('data-lzld-sizedown') || that._o.imgConfig.sizedown,
+                smaller:        img.getAttribute('data-lzld-smaller') || that._o.imgConfig.smaller,
+                widthfactor:    img.getAttribute('data-lzld-widthfactor') || that._o.imgConfig.widthfactor
+            };
+        },
+        getStoredParsedImgSrc: function(img) {
+            return {
+                filePath: img.getAttribute('data-lzld-filepath'),
+                fileName: img.getAttribute('data-lzld-filename'),
+                fileExt: img.getAttribute('data-lzld-fileext')
+                aliasBase: img.getAttribute('data-lzld-aliasbase')
+                baseSrc: img.getAttribute('data-lzld-basesrc')
+            };
+        },
+        getParsedImgSrc: function(img) {
+            var that = this,
+                imgSrc = img.getAttribute( that._o.srcAttr ),
+                lastSlash = imgSrc.lastIndexOf('/')+1,
+                filePath = imgSrc.substring(0,lastSlash),
+                file = imgSrc.substring(lastSlash),
+                lastPeriod = file.lastIndexOf('.'),
+                fileName = file.substring(0,lastPeriod),
+                fileExt = file.substring(lastPeriod);
+            // Store on the image for later use if needed
+            img.setAttribute('data-lzld-filepath', filePath);
+            img.setAttribute('data-lzld-filename', fileName);
+            img.setAttribute('data-lzld-fileext', fileExt);
+            img.setAttribute('data-lzld-aliasbase', filePath + fileName);
+            img.setAttribute('data-lzld-basesrc', filePath + fileName + fileExt);
+            // Mark img as 'isparsed'
+            img.setAttribute('data-lzld-isparsed','true');
+            // Return parsed parts
+            return {
+                filePath: filePath,
+                fileName: fileName,
+                fileExt: fileExt,
+                aliasBase: filePath + fileName,
+                baseSrc: filePath + fileName + fileExt
+            };
+        },
+        getAliasArray: function(img, imgConfig) {
+            var aliasArray = [];
+            var useHighRes = that._f.isHighRes && !imgConfig.lowres;
+            var viewportWidth = that._u.getViewport("Width");
+            var viewportWidthFactor = Math.floor( viewportWidth / imgConfig.widthfactor );
+            var firstAlias = !imgConfig.sizedown ? viewportWidthFactor * imgConfig.widthfactor : (viewportWidthFactor+1) * imgConfig.widthfactor;
+            // look for at least one resized image
+            if (useHighRes) aliasArray.push( '_' + firstAlias + imgConfig.highressuffix );;
+            aliasArray.push( '_' + firstAlias );
+            // if longfallback then add to many more to the array
+            if (imgConfig.longfallback) {
+                for (var i = viewportWidthFactor-1; i >= 0; i--){
+                    var alias = !imgConfig.sizedown ? i * imgConfig.widthfactor : (i+1) * imgConfig.widthfactor;
+                    if (useHighRes) aliasArray.push( '_' + alias + imgConfig.highressuffix );
+                    aliasArray.push( '_' + alias );
+                };
+            };
+            // a fallback to look for the smallest image
+            if (useHighRes) aliasArray.push( '_small' + imgConfig.highressuffix );
+            aliasArray.push( '_small' );
+            // final fallback to the original image
+            if (useHighRes) aliasArray.push( imgConfig.highressuffix );
+            aliasArray.push( '' );
             
+            return aliasArray;
+        },
+        requestImg: function(imgData) {
+            var that = this;
+            // if not in requestingBaseImgSrc
+            if (imgData.aliasArray.length && that._u.inArray(imgData._p.baseSrc, that.requestingBaseImgSrc) === -1) {
+                that.requestingBaseImgSrc.push(imgData._p.baseSrc);
+                // make the next request in the alias array
+                // TODO
+                // remove first alias (the one we just used) from aliasArray
+                imgData.aliasArray.splice(0,1);
+                // when it's finished checking it will remove the baseSrc from requestingBaseImgSrc, and make the next request if needed
+            } else {
+                console.log("requestImg:",imgData);
+            }
         }
     }
     
-    // Utility methods - more library-like methods
+    // Utility methods - methods that are ok all by themselves and don't need any extra outside info
     LazyloadResponsive._u = {
         lzld: LazyloadResponsive,
         _o: config,
