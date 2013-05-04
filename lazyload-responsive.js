@@ -101,10 +101,10 @@ function contentLoaded(win, fn) {
         loadImgsQ: [], // All images start here
         loadedImgs: [], // All loaded (and correctly sized) images end here; Also doubles as the array of images that need to be checked when browser is resized
         requestingBaseImgSrc: [], // Store base file name (e.g. 'path/to/image.jpg') of image srcs currently being requested to prevent multiple requests for different sizes of the same image
-        requestImgsQ: [], // Full src queue of different sizes of an image currently being requested in case it 404s
         availableImgSrc: [], // Store all successful requests to reuse when needed
         unavailableImgSrc: [], // Store all unsuccessful requests to prevent an unnecessary 404 request
-        initilize: function() {
+        xmlhttp: [],
+        initialize: function() {
             var that = this;
             // Set high-res flag
             that._f.isHighRes = that._u.getPixelRatio() >= that._o.highResThreshold;
@@ -134,6 +134,8 @@ function contentLoaded(win, fn) {
         loadImgs: function() {
             // start with loadImgsQ
             var that = this;
+            // reverse the img queue
+            that.loadImgsQ.reverse();
             for (var i = that.loadImgsQ.length - 1; i >= 0; i--) {
                 var img = that.loadImgsQ[i];
                 var imgData = that.getImgData(img);
@@ -142,6 +144,9 @@ function contentLoaded(win, fn) {
                 // remove from loadImgsQ
                 that.loadImgsQ.splice(i,1);
             }
+        },
+        attachEvents: function() {
+            // TODO: add onresize and onscroll events
         },
         // Should only be run once per image, otherwise it needs to be stored. imgData.aliasArray is the only one that should need to change
         getImgData: function(img) {
@@ -179,8 +184,8 @@ function contentLoaded(win, fn) {
             return {
                 filePath: img.getAttribute('data-lzld-filepath'),
                 fileName: img.getAttribute('data-lzld-filename'),
-                fileExt: img.getAttribute('data-lzld-fileext')
-                aliasBase: img.getAttribute('data-lzld-aliasbase')
+                fileExt: img.getAttribute('data-lzld-fileext'),
+                aliasBase: img.getAttribute('data-lzld-aliasbase'),
                 baseSrc: img.getAttribute('data-lzld-basesrc')
             };
         },
@@ -211,6 +216,7 @@ function contentLoaded(win, fn) {
             };
         },
         getAliasArray: function(img, imgConfig) {
+            var that = this;
             var aliasArray = [];
             var useHighRes = that._f.isHighRes && !imgConfig.lowres;
             var viewportWidth = that._u.getViewport("Width");
@@ -240,18 +246,60 @@ function contentLoaded(win, fn) {
             var that = this;
             // if not in requestingBaseImgSrc
             if (imgData.aliasArray.length && that._u.inArray(imgData._p.baseSrc, that.requestingBaseImgSrc) === -1) {
-                that.requestingBaseImgSrc.push(imgData._p.baseSrc);
-                // make the next request in the alias array
-                // TODO
-                // remove first alias (the one we just used) from aliasArray
+                // build image src with first alias
+                var imgSrc = imgData._p.aliasBase + imgData.aliasArray[0] + imgData._p.fileExt;
+                // remove first alias (the one we just used) from aliasArray so the next time requestImg is called, it will use the next one
                 imgData.aliasArray.splice(0,1);
-                // when it's finished checking it will remove the baseSrc from requestingBaseImgSrc, and make the next request if needed
+                // store base img src to prevent another request of the same image
+                that.requestingBaseImgSrc.push(imgData._p.baseSrc);
+                // check if in available before making a request
+                if (that._u.inArray(imgSrc, that.availableImgSrc) !== -1) {
+                    that.requestSuccess(imgData);
+                    return;
+                } else if (that._u.inArray(imgSrc, that.unavailableImgSrc) !== -1) {
+                    that.requestImg(imgData);
+                } else { 
+                    // make the next request in the alias array
+                    that.imgRequest(imgSrc, imgData);
+                };
             } else {
                 console.log("requestImg:",imgData);
             }
+        },
+        imgRequest: function(imgSrc, imgData) {
+            var that = this;
+            var i = that.xmlhttp.length;
+            console.log(i,imgSrc);
+            that.xmlhttp[i] = window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("Microsoft.XMLHTTP");
+            that.xmlhttp[i].onreadystatechange = function() {
+                if (that.xmlhttp[i].readyState == 4) {
+                    // when it's finished checking it will remove the baseSrc from requestingBaseImgSrc
+                    that.requestingBaseImgSrc.splice( that.requestingBaseImgSrc.indexOf( imgData._p.baseSrc ), 1);
+                    // Check the status
+                    if (that.xmlhttp[i].status == 200) {
+                        // add to available imgSrcs
+                        that.availableImgSrc.push(imgSrc);
+                        // call callback
+                        that.requestSuccess(imgSrc, imgData);
+                    } else {
+                        // add to unavailable imgSrcs
+                        that.unavailableImgSrc.push(imgSrc);
+                        // try the next alias
+                        that.requestImg( imgData );
+                    }
+                };
+            };
+            that.xmlhttp[i].open("GET",imgSrc,false);
+            that.xmlhttp[i].send();
+        },
+        requestSuccess: function(imgSrc, imgData) {
+            var that = this;
+            var img = imgData._e.img;
+            // Change the img src to the successful imgSrc
+            img.src = imgSrc;
         }
     }
-    
+
     // Utility methods - methods that are ok all by themselves and don't need any extra outside info
     LazyloadResponsive._u = {
         lzld: LazyloadResponsive,
@@ -268,12 +316,6 @@ function contentLoaded(win, fn) {
                 // https://github.com/documentcloud/underscore/issues/387
                 fn.apply(this, arguments);
             };
-        },
-        urlExists: function(url) {
-            var req = new XMLHttpRequest();
-            req.open('GET', url, false);
-            req.send();
-            return req.status==200;
         },
         addEvent: function(el, type, fn) {
           if (el.attachEvent) {
