@@ -1,4 +1,4 @@
-/*! lazyload-responsive - v0.2.1 - 2013-05-05
+/*! lazyload-responsive - v0.2.2 - 2013-05-05
 * Copyright (c) 2013 Kevin Kirchner; Licensed BSD */
 
 /*!
