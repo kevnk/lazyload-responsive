@@ -43,4 +43,5 @@ I will pull some ideas from [https://github.com/fasterize/lazyload](https://gith
 
 ## How to Contribute
 
-Just send me a pull request. Thanks!
+1. run `npm install` which will concatenate and minify the distribution files
+- send me a pull request

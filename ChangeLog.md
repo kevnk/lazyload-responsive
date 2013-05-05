@@ -1,9 +1,11 @@
 # Change Log
 
 
-## 0.2.1 - Tiger Cat
+## 0.2.2
 
-- Queuing requests so we don't make unnessary ones
+- Putting a leash on requests
+- Load images on scroll
+- Added grunt; run `npm install` before sending me a pull request
 
 
 ## 0.2 - Ragged Dog
