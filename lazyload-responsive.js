@@ -77,13 +77,13 @@ function contentLoaded(win, fn) {
         highResThreshold: 1.5, // any pixel ratio >= this number will be flagged as high-res
         throttleInterval: 20, // throttled interval for scroll and resize events
         useGlobalImgConfig: false, // if `false`, the script will look for the following imgConfig on each lzld img (e.g. img.getAttribute('data-lzld-highressuffix') || imgConfig.highressuffix - which takes the script longer to process); setting to `true` is the fastest option
+        findSmallerImgs: true, // forces script to look for and load smaller images as viewport is resized to a smaller size
         imgConfig: {
             highressuffix: '@2x', // e.g. imagename@2x.jpg or imagename_400@2x.jpg would be the high-res images
             loadevent: ['scroll','resize'], // you may want to load the images on a custom event; this is where you do that
             longfallback: true, // will look for all smaller images before loading the original (and largest image)
             lowres: false, // forces script to **not** look for high-res images
             sizedown: false, // by default images are sized up; this option forces it to get an image larger than the viewport and shrink it; NOTE: setting to `true` will load larger images and increase pageload
-            smaller: false, // forces script to look for and load smaller images as viewport is resized to a smaller size
             widthfactor: 200 // looks for images with the following naming convention [real-image-src]_[factor of widthfactor].[file-extenstion]
         }
     };
@@ -145,8 +145,43 @@ function contentLoaded(win, fn) {
                 that.loadImgsQ.splice(i,1);
             }
         },
+        resizeImgs: function() {
+            var that = this;
+            for (var i = 0,il = that.loadedImgs.length; i < il; i++){
+                var imgData = that.loadedImgs[i];
+                // reset the alias array b/c of the new browser width
+                imgData.aliasArray = that.getAliasArray(imgData._e.img, imgData._o);
+                
+                // TODO: rethink how to bypass requestingBaseImgSrc check as you continue to resize - and think of another way
+                // that.requestImg(imgData);
+            };
+        },
         attachEvents: function() {
-            // TODO: add onresize and onscroll events
+            var that = this;
+            var winW = that._u.getViewport("Width");
+            var throttleLoad = that._u.throttle( function(){
+                that.collectImgs();
+                that.loadImgs();
+            }, 20);
+            var throttleResize = that._u.throttle( function(){
+                that.resizeImgs();
+            }, 20);
+
+            // onresize
+            that._u.addEvent(window,"resize",function(){
+                var newWinW = that._u.getViewport("Width");
+                if (that._o.findSmallerImgs || newWinW > winW) {
+                    throttleResize();
+                };
+                if (newWinW > winW) {
+                    throttleLoad();
+                };
+                winW = newWinW;
+            });
+            // onscroll
+            that._u.addEvent(window,"scroll",function(){
+                throttleLoad();
+            });
         },
         // Should only be run once per image, otherwise it needs to be stored. imgData.aliasArray is the only one that should need to change
         getImgData: function(img) {
@@ -176,7 +211,6 @@ function contentLoaded(win, fn) {
                 longfallback:   img.getAttribute('data-lzld-longfallback') || that._o.imgConfig.longfallback,
                 lowres:         img.getAttribute('data-lzld-lowres') || that._o.imgConfig.lowres,
                 sizedown:       img.getAttribute('data-lzld-sizedown') || that._o.imgConfig.sizedown,
-                smaller:        img.getAttribute('data-lzld-smaller') || that._o.imgConfig.smaller,
                 widthfactor:    img.getAttribute('data-lzld-widthfactor') || that._o.imgConfig.widthfactor
             };
         },
@@ -229,8 +263,10 @@ function contentLoaded(win, fn) {
             if (imgConfig.longfallback) {
                 for (var i = viewportWidthFactor-1; i >= 0; i--){
                     var alias = !imgConfig.sizedown ? i * imgConfig.widthfactor : (i+1) * imgConfig.widthfactor;
-                    if (useHighRes) aliasArray.push( '_' + alias + imgConfig.highressuffix );
-                    aliasArray.push( '_' + alias );
+                    if (alias > 0) {
+                        if (useHighRes) aliasArray.push( '_' + alias + imgConfig.highressuffix );
+                        aliasArray.push( '_' + alias );
+                    };
                 };
             };
             // a fallback to look for the smallest image
@@ -254,22 +290,19 @@ function contentLoaded(win, fn) {
                 that.requestingBaseImgSrc.push(imgData._p.baseSrc);
                 // check if in available before making a request
                 if (that._u.inArray(imgSrc, that.availableImgSrc) !== -1) {
-                    that.requestSuccess(imgData);
+                    that.requestSuccess(imgSrc, imgData);
                     return;
                 } else if (that._u.inArray(imgSrc, that.unavailableImgSrc) !== -1) {
                     that.requestImg(imgData);
                 } else { 
                     // make the next request in the alias array
-                    that.imgRequest(imgSrc, imgData);
+                    that.sendImgRequest(imgSrc, imgData);
                 };
-            } else {
-                console.log("requestImg:",imgData);
             }
         },
-        imgRequest: function(imgSrc, imgData) {
+        sendImgRequest: function(imgSrc, imgData) {
             var that = this;
             var i = that.xmlhttp.length;
-            console.log(i,imgSrc);
             that.xmlhttp[i] = window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("Microsoft.XMLHTTP");
             that.xmlhttp[i].onreadystatechange = function() {
                 if (that.xmlhttp[i].readyState == 4) {
@@ -285,7 +318,7 @@ function contentLoaded(win, fn) {
                         // add to unavailable imgSrcs
                         that.unavailableImgSrc.push(imgSrc);
                         // try the next alias
-                        that.requestImg( imgData );
+                        that.requestImg(imgData);
                     }
                 };
             };
@@ -297,6 +330,8 @@ function contentLoaded(win, fn) {
             var img = imgData._e.img;
             // Change the img src to the successful imgSrc
             img.src = imgSrc;
+            // add image to list of loadedImgs
+            that.loadedImgs.push(imgData);
         }
     }
 
