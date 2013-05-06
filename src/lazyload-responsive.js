@@ -72,10 +72,10 @@
                     var img = allImgs[i];
                     if (that._u.inArray(img, that.imgs) === -1) {
                         that.imgs.push( img );
-                    };
+                    }
                     if (!img.getAttribute('data-lzld-complete') && that._u.isVisible(img)) {
-                        that.loadImgsQ.push( img )
-                    };
+                        that.loadImgsQ.push( img );
+                    }
                 }
             }
         },
@@ -102,7 +102,7 @@
                 
                 // TODO: rethink how to bypass requestingBaseImgSrc check as you continue to resize - and think of another way
                 // that.requestImg(imgData);
-            };
+            }
         },
         attachEvents: function() {
             var that = this;
@@ -120,10 +120,10 @@
                 var newWinW = that._u.getViewport("Width");
                 if (that._o.findSmallerImgs || newWinW > winW) {
                     throttleResize();
-                };
+                }
                 if (newWinW > winW) {
                     throttleLoad();
-                };
+                }
                 winW = newWinW;
             });
             // onscroll
@@ -151,7 +151,7 @@
         },
         getImgConfig: function(img) {
             var that = this;
-            if (that._o.useGlobalImgConfig) return that._o.imgConfig;
+            if (that._o.useGlobalImgConfig) { return that._o.imgConfig; }
             // else look for options stored on the <img>
             return {
                 highressuffix:  img.getAttribute('data-lzld-highressuffix') || that._o.imgConfig.highressuffix,
@@ -205,23 +205,23 @@
             var viewportWidthFactor = Math.floor( viewportWidth / imgConfig.widthfactor );
             var firstAlias = !imgConfig.sizedown ? viewportWidthFactor * imgConfig.widthfactor : (viewportWidthFactor+1) * imgConfig.widthfactor;
             // look for at least one resized image
-            if (useHighRes) aliasArray.push( '_' + firstAlias + imgConfig.highressuffix );;
+            if (useHighRes) { aliasArray.push( '_' + firstAlias + imgConfig.highressuffix ); }
             aliasArray.push( '_' + firstAlias );
             // if longfallback then add to many more to the array
             if (imgConfig.longfallback) {
                 for (var i = viewportWidthFactor-1; i >= 0; i--){
                     var alias = !imgConfig.sizedown ? i * imgConfig.widthfactor : (i+1) * imgConfig.widthfactor;
                     if (alias > 0) {
-                        if (useHighRes) aliasArray.push( '_' + alias + imgConfig.highressuffix );
+                        if (useHighRes) { aliasArray.push( '_' + alias + imgConfig.highressuffix ); }
                         aliasArray.push( '_' + alias );
-                    };
-                };
-            };
+                    }
+                }
+            }
             // a fallback to look for the smallest image
-            if (useHighRes) aliasArray.push( '_small' + imgConfig.highressuffix );
+            if (useHighRes) { aliasArray.push( '_small' + imgConfig.highressuffix ); }
             aliasArray.push( '_small' );
             // final fallback to the original image
-            if (useHighRes) aliasArray.push( imgConfig.highressuffix );
+            if (useHighRes) { aliasArray.push( imgConfig.highressuffix ); }
             aliasArray.push( '' );
             
             return aliasArray;
@@ -245,7 +245,7 @@
                 } else { 
                     // make the next request in the alias array
                     that.sendImgRequest(imgSrc, imgData);
-                };
+                }
             }
         },
         sendImgRequest: function(imgSrc, imgData) {
@@ -253,11 +253,11 @@
             var i = that.xmlhttp.length;
             that.xmlhttp[i] = window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("Microsoft.XMLHTTP");
             that.xmlhttp[i].onreadystatechange = function() {
-                if (that.xmlhttp[i].readyState == 4) {
+                if (that.xmlhttp[i].readyState === 4) {
                     // when it's finished checking it will remove the baseSrc from requestingBaseImgSrc
                     that.requestingBaseImgSrc.splice( that.requestingBaseImgSrc.indexOf( imgData._p.baseSrc ), 1);
                     // Check the status
-                    if (that.xmlhttp[i].status == 200) {
+                    if (that.xmlhttp[i].status === 200) {
                         // add to available imgSrcs
                         that.availableImgSrc.push(imgSrc);
                         // call callback
@@ -268,7 +268,7 @@
                         // try the next alias
                         that.requestImg(imgData);
                     }
-                };
+                }
             };
             that.xmlhttp[i].open("GET",imgSrc,false);
             that.xmlhttp[i].send();
@@ -281,7 +281,7 @@
             // add image to list of loadedImgs
             that.loadedImgs.push(imgData);
         }
-    }
+    };
 
     // Utility methods - methods that are ok all by themselves and don't need any extra outside info
     LazyloadResponsive._u = {
@@ -300,19 +300,15 @@
                 fn.apply(this, arguments);
             };
         },
-        addEvent: function(el, type, fn) {
-          if (el.attachEvent) {
-            el.attachEvent && el.attachEvent( 'on' + type, fn );
-          } else {
-            el.addEventListener( type, fn, false );
-          }
-        },
-        removeEvent: function(el, type, fn) {
-          if (el.detachEvent) {
-            el.detachEvent && el.detachEvent( 'on' + type, fn );
-          } else {
-            el.removeEventListener( type, fn, false );
-          }
+        // @see: http://ejohn.org/projects/flexible-javascript-events/
+        addEvent: function( obj, type, fn ) {
+            if ( obj.attachEvent ) {
+                obj['e'+type+fn] = fn;
+                obj[type+fn] = function(){obj['e'+type+fn]( window.event );};
+                obj.attachEvent( 'on'+type, obj[type+fn] );
+            } else {
+                obj.addEventListener( type, fn, false );
+            }
         },
         // https://github.com/jquery/jquery/blob/f3515b735e4ee00bb686922b2e1565934da845f8/src/core.js#L610
         // We cannot use Array.prototype.indexOf because it's not always available
@@ -353,10 +349,10 @@
         contains: function(a,b) {
             if (document.documentElement.compareDocumentPosition) {
                 return !!(a.compareDocumentPosition( b ) & 16);
-            };
+            }
             if (document.documentElement.contains) {
                 return a !== b && ( a.contains ? a.contains( b ) : false );
-            };
+            }
             while ( (b = b.parentNode) ) {
               if ( b === a ) {
                 return true;
@@ -367,7 +363,7 @@
         getPixelRatio: function() {
             return !!window.devicePixelRatio ? window.devicePixelRatio : 1;
         }
-    }
+    };
     
     // Bind to window
     window.LazyloadResponsive = LazyloadResponsive;

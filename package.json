@@ -7,7 +7,7 @@
     "test": "test"
   },
   "scripts": {
-    "prepublish": "grunt concat; grunt uglify;"
+    "prepublish": "grunt jshint; grunt concat; grunt uglify;"
   },
   "repository": {
     "type": "git",
