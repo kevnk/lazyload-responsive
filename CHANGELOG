@@ -5,6 +5,7 @@
 
 - Putting a leash on requests
 - Load images on scroll
+- Load images on resize
 - Added grunt; run `npm install` before sending me a pull request
 
 
