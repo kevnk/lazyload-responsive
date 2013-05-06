@@ -14,14 +14,14 @@ If you're lazyloading images, you might as well add features to load responsive 
 ## How it works
 ### Responsive
 
-**Markup**
+#### Markup
 
 	<img data-lzld-src="path/to/real-image-src.jpg" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" />
 	<noscript>
 		<img src="path/to/real-image-src.jpg" />
 	</noscript>
 
-**Options**
+#### Options
 
 **srcAttr**: 'data-lzld-src', // the attribute the script uses to find images to lazyload-respond to  
 **offset**: 200, // distance (px) below the fold where images will be loaded  
@@ -29,18 +29,22 @@ If you're lazyloading images, you might as well add features to load responsive 
 **throttleInterval**: 20, // throttled interval for scroll and resize events  
 **useGlobalImgConfig**: false, // if `false`, the script will look for the following imgConfig on each lzld img (e.g. img.getAttribute('data-lzld-highressuffix') || imgConfig.highressuffix - which takes the script longer to process); setting to `true` is the fastest option  
 **findSmallerImgs**: true, // forces script to look for and load smaller images as viewport is resized to a smaller size  
+
+##### Image options
+**`NOTE:`** These options will be overridden if they are set on the individual image as a data attribute as `data-lzld-[option]` (e.g. `data-lzld-longfallback`);  
+
 **highressuffix**: '@2x', // e.g. imagename@2x.jpg or imagename_400@2x.jpg would be the high-res images  
 **longfallback**: true, // will look for all smaller images before loading the original (and largest image)  
 **lowres**: false, // forces script to **not** look for high-res images  
 **sizedown**: false, // by default images are sized up; this option forces it to get an image larger than the viewport and shrink it; NOTE: setting to `true` will load larger images and increase pageload  
 **widthfactor**: 200 // looks for images with the following naming convention [real-image-src]_[factor of widthfactor].[file-extenstion]  
 
-**Options in progress**
+##### Options in progress
 
 **loadevent**: ['scroll','resize'], // you may want to load the images on a custom event; this is where you do that
 
 
-**Process**
+#### Process
 
 - You make images for different breakpoimts (default is every 200px: see `widthfactor` option).
 	- So you've created your set of images: `real-image-src_smaller.jpg`, `real-image-src_200.jpg`, `real-image-src_400.jpg`, `real-image-src_600.jpg`, and `real-image-src.jpg`
@@ -58,8 +62,7 @@ With some ideas from [https://github.com/fasterize/lazyload](https://github.com/
 ## TODO
 
 - add ability to load/resize images with a declared custom event
-- drop grunt and add coffee-script and CakeFile
-- Do roadmap
+- Do Roadmap
 
 ## Roadmap
 
