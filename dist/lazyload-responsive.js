@@ -63,11 +63,6 @@ function contentLoaded(win, fn) {
 *
 */
 
-// TODO:
-// use some sort of promise-type OnReadyStateChange with the urlExists method so images aren't being requested while others are being loaded
-    // have baseSrc saved in a queue while image is loading
-// Optimize when everything gets initilized and isolate the things that need dom loaded
-
 (function(window, document){
     
     // Set default configuration
@@ -173,10 +168,10 @@ function contentLoaded(win, fn) {
             var throttleLoad = that._u.throttle( function(){
                 that.collectLoadImgsQ();
                 that.loadImgs();
-            }, 20);
+            }, that._o.throttleInterval);
             var throttleResize = that._u.throttle( function(){
                 that.resizeImgs();
-            }, 20);
+            }, that._o.throttleInterval);
 
             // onresize
             that._u.addEvent(window,"resize",function(){
