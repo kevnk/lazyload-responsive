@@ -33,11 +33,11 @@ If you're lazyloading images, you might as well add features to load responsive 
 **longfallback**: true, // will look for all smaller images before loading the original (and largest image)  
 **lowres**: false, // forces script to **not** look for high-res images  
 **sizedown**: false, // by default images are sized up; this option forces it to get an image larger than the viewport and shrink it; NOTE: setting to `true` will load larger images and increase pageload  
-widthfactor: 200 // looks for images with the following naming convention [real-image-src]_[factor of widthfactor].[file-extenstion]  
+**widthfactor**: 200 // looks for images with the following naming convention [real-image-src]_[factor of widthfactor].[file-extenstion]  
 
 **Options in progress**
 
-loadevent: ['scroll','resize'], // you may want to load the images on a custom event; this is where you do that
+**loadevent**: ['scroll','resize'], // you may want to load the images on a custom event; this is where you do that
 
 
 **Process**
