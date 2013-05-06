@@ -31,7 +31,7 @@ If you're lazyloading images, you might as well add features to load responsive 
 **findSmallerImgs**: true, // forces script to look for and load smaller images as viewport is resized to a smaller size  
 
 ##### Image options
-**`NOTE:`** These options will be overridden if they are set on the individual image as a data attribute as `data-lzld-[option]` (e.g. `data-lzld-longfallback`);  
+`NOTE:` These options will be overridden if they are set on the individual image as a data attribute as `data-lzld-[option]` (e.g. `data-lzld-longfallback`);  
 
 **highressuffix**: '@2x', // e.g. imagename@2x.jpg or imagename_400@2x.jpg would be the high-res images  
 **longfallback**: true, // will look for all smaller images before loading the original (and largest image)  
