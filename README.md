@@ -58,7 +58,8 @@ With some ideas from [https://github.com/fasterize/lazyload](https://github.com/
 ## TODO
 
 - add ability to load/resize images with a declared custom event
-- Do Roadmap
+- drop grunt and add coffee-script and CakeFile
+- Do roadmap
 
 ## Roadmap
 
