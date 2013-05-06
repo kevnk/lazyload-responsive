@@ -52,6 +52,7 @@
         availableImgSrc: [], // Store all successful requests to reuse when needed
         unavailableImgSrc: [], // Store all unsuccessful requests to prevent an unnecessary 404 request
         xmlhttp: [],
+        resizeTimeout: 0,
         initialize: function() {
             var that = this;
             // Set high-res flag
@@ -79,6 +80,15 @@
                 }
             }
         },
+        collectLoadImgsQ: function() {
+            var that = this;
+            for ( var i = 0, il = that.imgs.length; i < il; i++ ){
+                var img = that.imgs[i];
+                if ( that._u.inArray(img, that.loadImgsQ) === -1 && !img.getAttribute('data-lzld-complete') && that._u.isVisible(img) ) {
+                    that.loadImgsQ.push( img );
+                }
+            }
+        },
         loadImgs: function() {
             // start with loadImgsQ
             var that = this;
@@ -95,20 +105,21 @@
         },
         resizeImgs: function() {
             var that = this;
-            for (var i = 0,il = that.loadedImgs.length; i < il; i++){
+            for (var i = 0, il = that.loadedImgs.length; i < il; i++){
                 var imgData = that.loadedImgs[i];
                 // reset the alias array b/c of the new browser width
                 imgData.aliasArray = that.getAliasArray(imgData._e.img, imgData._o);
                 
-                // TODO: rethink how to bypass requestingBaseImgSrc check as you continue to resize - and think of another way
-                // that.requestImg(imgData);
+                // only request an image when alias array changes
+                // be sure to stop other requests being made currently before requesting again
+                that.requestImg(imgData);
             }
         },
         attachEvents: function() {
             var that = this;
             var winW = that._u.getViewport("Width");
             var throttleLoad = that._u.throttle( function(){
-                that.collectImgs();
+                that.collectLoadImgsQ();
                 that.loadImgs();
             }, 20);
             var throttleResize = that._u.throttle( function(){
@@ -121,9 +132,7 @@
                 if (that._o.findSmallerImgs || newWinW > winW) {
                     throttleResize();
                 }
-                if (newWinW > winW) {
-                    throttleLoad();
-                }
+                // TODO: when the browser is resized and images change, new images MAY come into view that need to be loaded, we should check for those after the resizing is complete
                 winW = newWinW;
             });
             // onscroll
@@ -238,9 +247,16 @@
                 that.requestingBaseImgSrc.push(imgData._p.baseSrc);
                 // check if in available before making a request
                 if (that._u.inArray(imgSrc, that.availableImgSrc) !== -1) {
+                    // remove base img src from requestingBaseImgSrc so it can get in the next time
+                    that.requestingBaseImgSrc.splice(that.requestingBaseImgSrc.length-1, 1);
+                    // change image
                     that.requestSuccess(imgSrc, imgData);
                     return;
+                // check if in unavailable before making request
                 } else if (that._u.inArray(imgSrc, that.unavailableImgSrc) !== -1) {
+                    // remove base img src from requestingBaseImgSrc so it can get in the next time
+                    that.requestingBaseImgSrc.splice(that.requestingBaseImgSrc.length-1, 1);
+                    // call requestImg again, but this time the first item of aliasArray will be different
                     that.requestImg(imgData);
                 } else { 
                     // make the next request in the alias array
@@ -279,7 +295,11 @@
             // Change the img src to the successful imgSrc
             img.src = imgSrc;
             // add image to list of loadedImgs
-            that.loadedImgs.push(imgData);
+            if (that._u.inArray(imgData, that.loadedImgs) === -1) {
+                that.loadedImgs.push(imgData);
+            }
+            // mark as complete
+            img.setAttribute('data-lzld-complete','true');
         }
     };
 
