@@ -23,17 +23,17 @@ If you're lazyloading images, you might as well add features to load responsive 
 
 **Options**
 
-srcAttr: 'data-lzld-src', // the attribute the script uses to find images to lazyload-respond to
-offset: 200, // distance (px) below the fold where images will be loaded
-highResThreshold: 1.5, // any pixel ratio >= this number will be flagged as high-res
-throttleInterval: 20, // throttled interval for scroll and resize events
-useGlobalImgConfig: false, // if `false`, the script will look for the following imgConfig on each lzld img (e.g. img.getAttribute('data-lzld-highressuffix') || imgConfig.highressuffix - which takes the script longer to process); setting to `true` is the fastest option
-findSmallerImgs: true, // forces script to look for and load smaller images as viewport is resized to a smaller size
-highressuffix: '@2x', // e.g. imagename@2x.jpg or imagename_400@2x.jpg would be the high-res images
-longfallback: true, // will look for all smaller images before loading the original (and largest image)
-lowres: false, // forces script to **not** look for high-res images
-sizedown: false, // by default images are sized up; this option forces it to get an image larger than the viewport and shrink it; NOTE: setting to `true` will load larger images and increase pageload
-widthfactor: 200 // looks for images with the following naming convention [real-image-src]_[factor of widthfactor].[file-extenstion]
+**srcAttr**: 'data-lzld-src', // the attribute the script uses to find images to lazyload-respond to  
+**offset**: 200, // distance (px) below the fold where images will be loaded  
+**highResThreshold**: 1.5, // any pixel ratio >= this number will be flagged as high-res  
+**throttleInterval**: 20, // throttled interval for scroll and resize events  
+**useGlobalImgConfig**: false, // if `false`, the script will look for the following imgConfig on each lzld img (e.g. img.getAttribute('data-lzld-highressuffix') || imgConfig.highressuffix - which takes the script longer to process); setting to `true` is the fastest option  
+**findSmallerImgs**: true, // forces script to look for and load smaller images as viewport is resized to a smaller size  
+**highressuffix**: '@2x', // e.g. imagename@2x.jpg or imagename_400@2x.jpg would be the high-res images  
+**longfallback**: true, // will look for all smaller images before loading the original (and largest image)  
+**lowres**: false, // forces script to **not** look for high-res images  
+**sizedown**: false, // by default images are sized up; this option forces it to get an image larger than the viewport and shrink it; NOTE: setting to `true` will load larger images and increase pageload  
+widthfactor: 200 // looks for images with the following naming convention [real-image-src]_[factor of widthfactor].[file-extenstion]  
 
 **Options in progress**
 
