@@ -1,29 +1,19 @@
 {
-  "name": "lazyload-responsive",
-  "version": "0.2.2",
-  "description": "If you're lazyloading images, you might as well add features to load responsive images while you're at it",
-  "main": "lazyload-responsive.js",
-  "directories": {
-    "test": "test"
+  "name": "jquery-plugin",
+  "version": "0.0.0-ignored",
+  "engines": {
+    "node": ">= 0.8.0"
   },
   "scripts": {
-    "prepublish": "grunt jshint; grunt concat; grunt uglify;"
+    "test": "grunt qunit"
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/kevinkirchner/lazyload-responsive.git"
-  },
-  "keywords": [
-    "lazyload",
-    "responsive",
-    "images",
-    "mobile-first"
-  ],
-  "author": "Kevin Kirchner",
-  "license": "BSD",
-  "readmeFilename": "README.md",
-  "gitHead": "704b71195c8fbc927295d988b667bf3791bdc732",
   "devDependencies": {
+    "grunt-contrib-jshint": "~0.1.1",
+    "grunt-contrib-qunit": "~0.1.1",
+    "grunt-contrib-concat": "~0.1.2",
+    "grunt-contrib-uglify": "~0.1.1",
+    "grunt-contrib-watch": "~0.2.0",
+    "grunt-contrib-clean": "~0.4.0",
     "grunt": "~0.4.1"
   }
 }
